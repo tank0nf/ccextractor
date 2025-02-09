@@ -87,109 +87,113 @@ const uint8_t crop_tab[256 + 2 * MAX_NEG_CROP] = {times256(0x00), 0x00, 0x01,
 
 #define RGBA(r, g, b, a) (((unsigned)(a) << 24) | ((r) << 16) | ((g) << 8) | (b))
 
-typedef struct DVBSubCLUT
-{
-	int id;
-	int version;
+// typedef struct DVBSubCLUT
+// {
+// 	int id;
+// 	int version;
 
-	uint32_t clut4[4];
-	uint32_t clut16[16];
-	uint32_t clut256[256];
-	uint8_t ilut4[4];
-	uint8_t ilut16[16];
-	uint8_t ilut256[256];
+// 	uint32_t clut4[4];
+// 	uint32_t clut16[16];
+// 	uint32_t clut256[256];
+// 	uint8_t ilut4[4];
+// 	uint8_t ilut16[16];
+// 	uint8_t ilut256[256];
 
-	struct DVBSubCLUT *next;
-} DVBSubCLUT;
+// 	struct DVBSubCLUT *next;
+// } DVBSubCLUT;
 
-static DVBSubCLUT default_clut;
+// static DVBSubCLUT default_clut;
 
-typedef struct DVBSubObjectDisplay
-{
-	int object_id;
-	int region_id;
+// typedef struct DVBSubObjectDisplay
+// {
+// 	int object_id;
+// 	int region_id;
 
-	int x_pos;
-	int y_pos;
+// 	int x_pos;
+// 	int y_pos;
 
-	int fgcolor;
-	int bgcolor;
+// 	int fgcolor;
+// 	int bgcolor;
 
-	struct DVBSubObjectDisplay *region_list_next;
-	struct DVBSubObjectDisplay *object_list_next;
-} DVBSubObjectDisplay;
+// 	struct DVBSubObjectDisplay *region_list_next;
+// 	struct DVBSubObjectDisplay *object_list_next;
+// } DVBSubObjectDisplay;
 
-typedef struct DVBSubObject
-{
-	int id;
-	int version;
+// typedef struct DVBSubObject
+// {
+// 	int id;
+// 	int version;
 
-	int type;
+// 	int type;
 
-	DVBSubObjectDisplay *display_list;
+// 	DVBSubObjectDisplay *display_list;
 
-	struct DVBSubObject *next;
-} DVBSubObject;
+// 	struct DVBSubObject *next;
+// } DVBSubObject;
 
-typedef struct DVBSubRegionDisplay
-{
-	int region_id;
+// typedef struct DVBSubRegionDisplay
+// {
+// 	int region_id;
 
-	int x_pos;
-	int y_pos;
+// 	int x_pos;
+// 	int y_pos;
 
-	struct DVBSubRegionDisplay *next;
-} DVBSubRegionDisplay;
+// 	struct DVBSubRegionDisplay *next;
+// } DVBSubRegionDisplay;
 
-typedef struct DVBSubRegion
-{
-	int id;
-	int version;
+// typedef struct DVBSubRegion
+// {
+// 	int id;
+// 	int version;
 
-	int width;
-	int height;
-	int depth;
+// 	int width;
+// 	int height;
+// 	int depth;
 
-	int clut;
-	int bgcolor;
+// 	int clut;
+// 	int bgcolor;
 
-	uint8_t *pbuf;
-	int buf_size;
-	int dirty;
+// 	uint8_t *pbuf;
+// 	int buf_size;
+// 	int dirty;
 
-	DVBSubObjectDisplay *display_list;
+// 	DVBSubObjectDisplay *display_list;
 
-	struct DVBSubRegion *next;
-} DVBSubRegion;
+// 	struct DVBSubRegion *next;
+// } DVBSubRegion;
 
-typedef struct DVBSubDisplayDefinition
-{
-	int version;
+// typedef struct DVBSubDisplayDefinition
+// {
+// 	int version;
 
-	int x;
-	int y;
-	int width;
-	int height;
-} DVBSubDisplayDefinition;
+// 	int x;
+// 	int y;
+// 	int width;
+// 	int height;
+// } DVBSubDisplayDefinition;
 
-typedef struct DVBSubContext
-{
-	int composition_id;
-	int ancillary_id;
-	int lang_index;
-	int version;
-	/* Store time in ms */
-	LLONG time_out;
-#ifdef ENABLE_OCR
-	void *ocr_ctx;
-#endif
-	DVBSubRegion *region_list;
-	DVBSubCLUT *clut_list;
-	DVBSubObject *object_list;
+// typedef struct DVBSubContext {
+//     // Add these fields for multiple language support
+//     int num_languages;                              // Number of languages
+//     int composition_ids[MAX_LANGUAGE_PER_DESC];     // Array of composition IDs
+//     int ancillary_ids[MAX_LANGUAGE_PER_DESC];      // Array of ancillary IDs 
+//     int lang_indices[MAX_LANGUAGE_PER_DESC];       // Array of language indices
+    
+//     // Existing fields
+//     int version;
+//     LLONG time_out;
+// #ifdef ENABLE_OCR
+//     void *ocr_ctx;
+// #endif
+//     DVBSubRegion *region_list;
+//     DVBSubCLUT *clut_list;
+//     DVBSubObject *object_list;
+//     DVBSubRegionDisplay *display_list;
+//     DVBSubDisplayDefinition *display_definition;
+// 	struct ccx_s_write *out;
+// } DVBSubContext;
 
-	DVBSubRegionDisplay *display_list;
-	DVBSubDisplayDefinition *display_definition;
-} DVBSubContext;
+static int write_dvb_sub(struct lib_cc_decode *dec_ctx, struct encoder_ctx *enc_ctx, struct cc_subtitle *sub);
 
 static __inline unsigned int bytestream_get_byte(const uint8_t **b)
 {
@@ -418,28 +422,36 @@ static void delete_regions(DVBSubContext *ctx)
  * @return DVB context kept as void* for abstraction
  *
  */
+
+
+ 
 void *dvbsub_init_decoder(struct dvb_config *cfg, int initialized_ocr)
 {
-	int i, r, g, b, a = 0;
 	DVBSubContext *ctx = (DVBSubContext *)malloc(sizeof(DVBSubContext));
+	if (!ctx) return NULL;
+	
 	memset(ctx, 0, sizeof(DVBSubContext));
 
-	if (cfg)
-	{
-		ctx->composition_id = cfg->composition_id[0];
-		ctx->ancillary_id = cfg->ancillary_id[0];
-		ctx->lang_index = cfg->lang_index[0];
-	}
-	else
-	{
-		ctx->composition_id = 1;
-		ctx->ancillary_id = 1;
-		ctx->lang_index = 1;
+	if (cfg) {
+		ctx->num_languages = cfg->n_language;
+		if (ctx->num_languages > MAX_LANGUAGE_PER_DESC)
+			ctx->num_languages = MAX_LANGUAGE_PER_DESC;
+			
+		for (int i = 0; i < ctx->num_languages; i++) {
+			ctx->composition_ids[i] = cfg->composition_id[i];
+			ctx->ancillary_ids[i] = cfg->ancillary_id[i];
+			ctx->lang_indices[i] = cfg->lang_index[i];
+		}
+	} else {
+		ctx->num_languages = 1;
+		ctx->composition_ids[0] = 1;
+		ctx->ancillary_ids[0] = 1;
+		ctx->lang_indices[0] = 0;
 	}
 
 #ifdef ENABLE_OCR
 	if (!initialized_ocr)
-		ctx->ocr_ctx = init_ocr(ctx->lang_index);
+		ctx->ocr_ctx = init_ocr(ctx->lang_indices[0]);
 #endif
 	ctx->version = -1;
 
@@ -457,8 +469,9 @@ void *dvbsub_init_decoder(struct dvb_config *cfg, int initialized_ocr)
 
 	default_clut.clut16[0] = RGBA(0, 0, 0, 0);
 	default_clut.ilut16[0] = 0;
-	for (i = 1; i < 16; i++)
+	for (int i = 1; i < 16; i++)
 	{
+		int r, g, b;
 		if (i < 8)
 		{
 			r = (i & 1) ? 255 : 0;
@@ -477,8 +490,9 @@ void *dvbsub_init_decoder(struct dvb_config *cfg, int initialized_ocr)
 
 	default_clut.clut256[0] = RGBA(0, 0, 0, 0);
 	default_clut.ilut256[0] = 0;
-	for (i = 1; i < 256; i++)
+	for (int i = 1; i < 256; i++)
 	{
+		int r, g, b, a;
 		if (i < 8)
 		{
 			r = (i & 1) ? 255 : 0;
@@ -522,32 +536,43 @@ void *dvbsub_init_decoder(struct dvb_config *cfg, int initialized_ocr)
 
 	return (void *)ctx;
 }
+
 int dvbsub_close_decoder(void **dvb_ctx)
 {
-	DVBSubContext *ctx = (DVBSubContext *)*dvb_ctx;
-	DVBSubRegionDisplay *display;
+    DVBSubContext *ctx = (DVBSubContext *)*dvb_ctx;
+    DVBSubRegionDisplay *display;  // Add this declaration at the top
+    
+    // Close output files
+    for (int i = 0; i < ctx->num_languages; i++) {
+        if (ctx->out[i]) {
+            if (ctx->out[i]->fh) {
+                fclose(ctx->out[i]->fh);
+                ctx->out[i]->fh = NULL;
+            }
+            free(ctx->out[i]->filename);
+            free(ctx->out[i]);
+            ctx->out[i] = NULL;
+        }
+    }
 
-	delete_regions(ctx);
+    delete_regions(ctx);
+    delete_objects(ctx);
+    delete_cluts(ctx);
+    freep(&ctx->display_definition);
 
-	delete_objects(ctx);
-
-	delete_cluts(ctx);
-
-	freep(&ctx->display_definition);
-
-	while (ctx->display_list)
-	{
-		display = ctx->display_list;
-		ctx->display_list = display->next;
-		free(display);
-	}
+    while (ctx->display_list) {
+        display = ctx->display_list;
+        ctx->display_list = display->next;
+        free(display);
+    }
 
 #ifdef ENABLE_OCR
-	if (ctx->ocr_ctx)
-		delete_ocr(&ctx->ocr_ctx);
+    if (ctx->ocr_ctx)
+        delete_ocr(&ctx->ocr_ctx);
 #endif
-	freep(dvb_ctx);
-	return 0;
+
+    freep(dvb_ctx);
+    return 0;
 }
 
 static int dvbsub_read_2bit_string(uint8_t *destbuf, int dbuf_len,
@@ -1486,9 +1511,9 @@ static void dvbsub_parse_display_definition_segment(void *dvb_ctx,
  * when OCR subsystem is present then it also write recognised text in
  * cc_bitmap ocr_text variable.
  */
-static int write_dvb_sub(struct lib_cc_decode *dec_ctx, struct cc_subtitle *sub)
+static int write_dvb_sub(struct lib_cc_decode *dec_ctx, struct encoder_ctx *enc_ctx, struct cc_subtitle *sub)
 {
-	DVBSubContext *ctx;
+	DVBSubContext *ctx = (DVBSubContext *)dec_ctx->private_data;
 	DVBSubRegion *region;
 	DVBSubRegionDisplay *display;
 	DVBSubCLUT *clut;
@@ -1502,7 +1527,16 @@ static int write_dvb_sub(struct lib_cc_decode *dec_ctx, struct cc_subtitle *sub)
 
 	display_def = ctx->display_definition;
 	sub->type = CC_BITMAP;
-	sub->lang_index = ctx->lang_index;
+	sub->lang_index = ctx->lang_indices[sub->lang_index];
+
+	const char *lang_code = "und"; // Default to undefined
+	int lang_idx = sub->lang_index;
+	if (lang_idx >= 0 && lang_idx < ctx->num_languages) {
+		if (ctx->out[lang_idx]) {
+			enc_ctx->out = ctx->out[lang_idx];
+			lang_code = language[ctx->lang_indices[lang_idx]];
+		}
+	}
 
 	if (display_def)
 	{
@@ -1642,10 +1676,10 @@ static int write_dvb_sub(struct lib_cc_decode *dec_ctx, struct cc_subtitle *sub)
 				if (offset >= (width * height) || offset < 0)
 				{
 					mprint("write_dvb_sub(): Offset %d (out of bounds!) ignored.\n",
-					       offset);
+						   offset);
 					mprint("  Formula: offset=((y + y_off) * width) + x_off + x\n");
 					mprint("  y=%d, y_off=%d, width=%d, x_off=%d, x=%d\n",
-					       y, y_off, width, x_off, x);
+						   y, y_off, width, x_off, x);
 				}
 				else
 				{
@@ -1660,21 +1694,26 @@ static int write_dvb_sub(struct lib_cc_decode *dec_ctx, struct cc_subtitle *sub)
 
 	// Perform OCR
 #ifdef ENABLE_OCR
-	char *ocr_str = NULL;
-	if (ctx->ocr_ctx)
-	{
-		int ret = ocr_rect(ctx->ocr_ctx, rect, &ocr_str, region->bgcolor, dec_ctx->ocr_quantmode);
-		if (ret >= 0)
-			rect->ocr_text = ocr_str;
-		else
-			rect->ocr_text = NULL;
-		dbg_print(CCX_DMT_DVB, "\nOCR Result: %s\n", rect->ocr_text ? rect->ocr_text : "NULL");
-	}
-	else
-	{
-		rect->ocr_text = NULL;
+	if (rect->ocr_text) {
+		// Add language tag to OCR text
+		char *new_text = malloc(strlen(rect->ocr_text) + strlen(lang_code) + 4);
+		sprintf(new_text, "[%s] %s", lang_code, rect->ocr_text);
+		free(rect->ocr_text);
+		rect->ocr_text = new_text;
 	}
 #endif
+
+	// Write the subtitle data
+	if (enc_ctx->out && enc_ctx->out->fh) {
+		// Replace direct write/fwrite calls with write_wrapped:
+		char timeline[256]; // Example timeline string
+		char text[1024]; // Example subtitle text
+		// Populate timeline and text with actual subtitle data
+		write_wrapped(enc_ctx->out->fh, timeline, strlen(timeline));
+		write_wrapped(enc_ctx->out->fh, text, strlen(text));
+		write_wrapped(enc_ctx->out->fh, "\n\n", 2);
+	}
+
 	return 0;
 }
 
@@ -1683,8 +1722,7 @@ void dvbsub_handle_display_segment(struct encoder_ctx *enc_ctx,
 				   struct cc_subtitle *sub)
 {
 	DVBSubContext *ctx = (DVBSubContext *)dec_ctx->private_data;
-	if (!enc_ctx)
-		return;
+	if (!enc_ctx){ return;}
 	if (enc_ctx->write_previous) // this condition is used for the first subtitle - write_previous will be 0 first so we don't encode a non-existing previous sub
 	{
 		enc_ctx->prev->last_string = NULL;									    // Reset last recognized sub text
@@ -1739,7 +1777,7 @@ void dvbsub_handle_display_segment(struct encoder_ctx *enc_ctx,
 	sub->prev = copy_subtitle(sub);
 	sub->prev->start_time = (dec_ctx->timing->current_pts - dec_ctx->timing->min_pts) / (MPEG_CLOCK_FREQ / 1000); // we set the start time of the previous sub the current pts
 
-	write_dvb_sub(dec_ctx->prev, sub->prev); // we write the current dvb sub to update decoder context
+	write_dvb_sub(dec_ctx->prev, enc_ctx, sub->prev);
 	enc_ctx->write_previous = 1;		 // we update our boolean value so next time the program reaches this block of code, it encodes the previous sub
 #ifdef ENABLE_OCR
 	if (sub->prev)
@@ -1766,7 +1804,8 @@ void dvbsub_handle_display_segment(struct encoder_ctx *enc_ctx,
  *
  * @return           -1 on error
  */
-int dvbsub_decode(struct encoder_ctx *enc_ctx, struct lib_cc_decode *dec_ctx, const unsigned char *buf, int buf_size, struct cc_subtitle *sub)
+int dvbsub_decode(struct encoder_ctx *enc_ctx, struct lib_cc_decode *dec_ctx, 
+				  const unsigned char *buf, int buf_size, struct cc_subtitle *sub)
 {
 	DVBSubContext *ctx = (DVBSubContext *)dec_ctx->private_data;
 	const uint8_t *p, *p_end;
@@ -1775,11 +1814,11 @@ int dvbsub_decode(struct encoder_ctx *enc_ctx, struct lib_cc_decode *dec_ctx, co
 	int segment_length;
 	int ret = 0;
 	int got_segment = 0;
+	int lang_index = -1;
 
 	if (buf_size <= 6 || *buf != 0x0f)
 	{
-		mprint("dvbsub_decode: incomplete, broken or empty packet (size = %d, first byte=%02X)\n",
-		       buf_size, *buf);
+		mprint("dvbsub_decode: incomplete packet\n");
 		return -1;
 	}
 
@@ -1798,24 +1837,31 @@ int dvbsub_decode(struct encoder_ctx *enc_ctx, struct lib_cc_decode *dec_ctx, co
 		segment_length = RB16(p);
 		p += 2;
 
-		if (p_end - p < segment_length)
-		{
-			mprint("dvbsub_decode: incomplete, broken or empty packet, remaining bytes=%d, segment_length=%d\n",
-			       p_end - p, segment_length);
-			return -1;
+		if (segment_length > (p_end - p)) {
+			mprint("dvbsub_decode: invalid segment length\n");
+			ret = -1;
+			goto end;
 		}
 
-		if (page_id == ctx->composition_id || page_id == ctx->ancillary_id || ctx->composition_id == -1 || ctx->ancillary_id == -1)
+		// Check if page_id matches any of our composition/ancillary IDs
+		for (int i = 0; i < ctx->num_languages; i++)
 		{
-			// debug traces
-			dbg_print(CCX_DMT_DVB, "DVBSUB - PTS: %" PRId64 ", ", dec_ctx->timing->current_pts);
-			dbg_print(CCX_DMT_DVB, "FTS: %d, ", dec_ctx->timing->fts_now);
-			dbg_print(CCX_DMT_DVB, "SEGMENT TYPE: %2X, ", segment_type);
+			if (page_id == ctx->composition_ids[i] || 
+				page_id == ctx->ancillary_ids[i])
+			{
+				lang_index = i;
+				break;
+			}
+		}
+
+		if (lang_index >= 0 || ctx->composition_ids[0] == -1 || 
+			ctx->ancillary_ids[0] == -1)
+		{
+			sub->lang_index = lang_index; // Set subtitle language index
 
 			switch (segment_type)
 			{
 				case DVBSUB_PAGE_SEGMENT:
-					dbg_print(CCX_DMT_DVB, "(DVBSUB_PAGE_SEGMENT), SEGMENT LENGTH: %d", segment_length);
 					dvbsub_parse_page_segment(ctx, p, segment_length);
 					got_segment |= 1;
 					break;
@@ -1951,4 +1997,46 @@ int parse_dvb_description(struct dvb_config *cfg, unsigned char *data,
 	}
 
 	return 0;
+}
+
+void dvbsub_set_write(void *dvb_ctx, struct ccx_s_write *out)
+{
+    DVBSubContext *ctx = (DVBSubContext *)dvb_ctx;
+    
+    for (int i = 0; i < ctx->num_languages; i++) {
+        char filename[1024];
+        char *orig_filename = out->filename;
+        
+        // Remove extension from original filename
+        char *ext = strrchr(orig_filename, '.');
+        char base_filename[1024];
+        
+        if (ext) {
+            size_t base_len = ext - orig_filename;
+            strncpy(base_filename, orig_filename, base_len);
+            base_filename[base_len] = '\0';
+        } else {
+            strcpy(base_filename, orig_filename);
+        }
+        
+        // Create new filename with language code
+        snprintf(filename, sizeof(filename), "%s_%s.srt", 
+                base_filename, language[ctx->lang_indices[i]]);
+        
+        // Create new output context
+        ctx->out[i] = malloc(sizeof(struct ccx_s_write));
+        if (ctx->out[i]) {
+            memcpy(ctx->out[i], out, sizeof(struct ccx_s_write));
+            ctx->out[i]->filename = strdup(filename);
+            FILE *fh = fopen(filename, "wb");  // Use FILE* type
+            if (fh) {
+                ctx->out[i]->fh = fh;
+            } else {
+                mprint("Warning: Could not open file %s for writing\n", filename);
+                free(ctx->out[i]->filename);
+                free(ctx->out[i]);
+                ctx->out[i] = NULL;
+            }
+        }
+    }
 }

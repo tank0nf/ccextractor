@@ -53,7 +53,7 @@ void write_stringz_as_smptett(char *string, struct encoder_ctx *context, LLONG m
 		dbg_print(CCX_DMT_DECODER_608, "\r%s\n", str);
 	}
 	used = encode_line(context, context->buffer, (unsigned char *)str);
-	write_wrapped(context->out->fh, context->buffer, used);
+	write_wrapped(fileno(context->out->fh), context->buffer, used);
 	// Scan for \n in the string and replace it with a 0
 	while (pos_r < len)
 	{
@@ -80,10 +80,10 @@ void write_stringz_as_smptett(char *string, struct encoder_ctx *context, LLONG m
 			dbg_print(CCX_DMT_DECODER_608, "\r");
 			dbg_print(CCX_DMT_DECODER_608, "%s\n", context->subline);
 		}
-		write_wrapped(context->out->fh, el, u);
+		write_wrapped(fileno(context->out->fh), el, u);
 		// write (wb->fh, encoded_br, encoded_br_length);
 
-		write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+		write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 		begin += strlen((const char *)begin) + 1;
 	}
 
@@ -93,7 +93,7 @@ void write_stringz_as_smptett(char *string, struct encoder_ctx *context, LLONG m
 		dbg_print(CCX_DMT_DECODER_608, "\r%s\n", str);
 	}
 	used = encode_line(context, context->buffer, (unsigned char *)str);
-	write_wrapped(context->out->fh, context->buffer, used);
+	write_wrapped(fileno(context->out->fh), context->buffer, used);
 
 	free(el);
 	free(unescaped);
@@ -127,12 +127,12 @@ int write_cc_bitmap_as_smptett(struct cc_subtitle *sub, struct encoder_ctx *cont
 				millis_to_time(sub->start_time, &h1, &m1, &s1, &ms1);
 				millis_to_time(sub->end_time - 1, &h2, &m2, &s2, &ms2); // -1 To prevent overlapping with next line.
 				sprintf((char *)context->buffer, "<p begin=\"%02u:%02u:%02u.%03u\" end=\"%02u:%02u:%02u.%03u\">\n", h1, m1, s1, ms1, h2, m2, s2, ms2);
-				write_wrapped(context->out->fh, buf, strlen(buf));
+				write_wrapped(fileno(context->out->fh), buf, strlen(buf));
 				len = strlen(rect[i].ocr_text);
-				write_wrapped(context->out->fh, rect[i].ocr_text, len);
-				write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+				write_wrapped(fileno(context->out->fh), rect[i].ocr_text, len);
+				write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 				sprintf(buf, "</p>\n");
-				write_wrapped(context->out->fh, buf, strlen(buf));
+				write_wrapped(fileno(context->out->fh), buf, strlen(buf));
 			}
 		}
 	}
@@ -224,7 +224,7 @@ int write_cc_buffer_as_smptett(struct eia608_screen *data, struct encoder_ctx *c
 					dbg_print(CCX_DMT_DECODER_608, "\r%s\n", str);
 				}
 				used = encode_line(context, context->buffer, (unsigned char *)str);
-				write_wrapped(context->out->fh, context->buffer, used);
+				write_wrapped(fileno(context->out->fh), context->buffer, used);
 				// Trimming subs because the position is defined by "tts:origin"
 				int old_trim_subs = context->trim_subs;
 				context->trim_subs = 1;
@@ -381,9 +381,8 @@ int write_cc_buffer_as_smptett(struct eia608_screen *data, struct encoder_ctx *c
 					}
 				}
 
-				write_wrapped(context->out->fh, final, strlen(final));
-
-				write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+				write_wrapped(fileno(fileno(context->out->fh)), final, strlen(final));
+				write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 				context->trim_subs = old_trim_subs;
 
 				sprintf(str, "        <style tts:backgroundColor=\"#000000FF\" tts:fontSize=\"18px\"/></span>\n      </p>\n");
@@ -392,7 +391,7 @@ int write_cc_buffer_as_smptett(struct eia608_screen *data, struct encoder_ctx *c
 					dbg_print(CCX_DMT_DECODER_608, "\r%s\n", str);
 				}
 				used = encode_line(context, context->buffer, (unsigned char *)str);
-				write_wrapped(context->out->fh, context->buffer, used);
+				write_wrapped(fileno(context->out->fh), context->buffer, used);
 
 				if (context->encoding != CCX_ENC_UNICODE)
 				{

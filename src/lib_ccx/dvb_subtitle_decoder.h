@@ -23,18 +23,131 @@
 extern "C"
 {
 #endif
+typedef struct DVBSubCLUT
+{
+	int id;
+	int version;
 
-	struct dvb_config
-	{
-		unsigned char n_language;
-		unsigned int lang_index[MAX_LANGUAGE_PER_DESC];
-		/* subtitle type */
-		unsigned char sub_type[MAX_LANGUAGE_PER_DESC];
-		/* composition page id */
-		unsigned short composition_id[MAX_LANGUAGE_PER_DESC];
-		/* ancillary_page_id */
-		unsigned short ancillary_id[MAX_LANGUAGE_PER_DESC];
-	};
+	uint32_t clut4[4];
+	uint32_t clut16[16];
+	uint32_t clut256[256];
+	uint8_t ilut4[4];
+	uint8_t ilut16[16];
+	uint8_t ilut256[256];
+
+	struct DVBSubCLUT *next;
+} DVBSubCLUT;
+
+static DVBSubCLUT default_clut;
+
+typedef struct DVBSubObjectDisplay
+{
+	int object_id;
+	int region_id;
+
+	int x_pos;
+	int y_pos;
+
+	int fgcolor;
+	int bgcolor;
+
+	struct DVBSubObjectDisplay *region_list_next;
+	struct DVBSubObjectDisplay *object_list_next;
+} DVBSubObjectDisplay;
+
+typedef struct DVBSubObject
+{
+	int id;
+	int version;
+
+	int type;
+
+	DVBSubObjectDisplay *display_list;
+
+	struct DVBSubObject *next;
+} DVBSubObject;
+
+typedef struct DVBSubRegionDisplay
+{
+	int region_id;
+
+	int x_pos;
+	int y_pos;
+
+	struct DVBSubRegionDisplay *next;
+} DVBSubRegionDisplay;
+
+typedef struct DVBSubRegion
+{
+	int id;
+	int version;
+
+	int width;
+	int height;
+	int depth;
+
+	int clut;
+	int bgcolor;
+
+	uint8_t *pbuf;
+	int buf_size;
+	int dirty;
+
+	DVBSubObjectDisplay *display_list;
+
+	struct DVBSubRegion *next;
+} DVBSubRegion;
+
+typedef struct DVBSubDisplayDefinition
+{
+	int version;
+
+	int x;
+	int y;
+	int width;
+	int height;
+} DVBSubDisplayDefinition;
+
+typedef struct DVBSubContext {
+    // Language support
+    int num_languages;                              
+    int composition_ids[MAX_LANGUAGE_PER_DESC];     
+    int ancillary_ids[MAX_LANGUAGE_PER_DESC];      
+    int lang_indices[MAX_LANGUAGE_PER_DESC];       
+    
+    // Display and timing
+    int version;
+    LLONG time_out;
+    
+    // Output handlers
+    struct ccx_s_write *out[MAX_LANGUAGE_PER_DESC];
+    
+    // OCR context
+#ifdef ENABLE_OCR
+    void *ocr_ctx;
+#endif
+
+    // Display elements
+    DVBSubRegion *region_list;
+    DVBSubCLUT *clut_list;
+    DVBSubObject *object_list;
+    DVBSubRegionDisplay *display_list;
+    DVBSubDisplayDefinition *display_definition;
+} DVBSubContext;
+
+void dvbsub_set_write(void *dvb_ctx, struct ccx_s_write *out);
+
+struct dvb_config
+{
+	unsigned char n_language;
+	unsigned int lang_index[MAX_LANGUAGE_PER_DESC];
+	/* subtitle type */
+	unsigned char sub_type[MAX_LANGUAGE_PER_DESC];
+	/* composition page id */
+	unsigned short composition_id[MAX_LANGUAGE_PER_DESC];
+	/* ancillary_page_id */
+	unsigned short ancillary_id[MAX_LANGUAGE_PER_DESC];
+};
 
 	/**
 	* @param cfg Structure containg configuration

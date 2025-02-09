@@ -14,7 +14,7 @@ void dinit_write(struct ccx_s_write *wb)
 		return;
 	}
 	if (wb->fh > 0)
-		close(wb->fh);
+		fclose(wb->fh);
 	freep(&wb->filename);
 	freep(&wb->original_filename);
 	if (wb->with_semaphore && wb->semaphore_filename)
@@ -26,7 +26,7 @@ void dinit_write(struct ccx_s_write *wb)
 
 int temporarily_close_output(struct ccx_s_write *wb)
 {
-	close(wb->fh);
+	fclose(wb->fh);
 	wb->fh = -1;
 	wb->temporarily_closed = 1;
 	return 0;
@@ -34,57 +34,57 @@ int temporarily_close_output(struct ccx_s_write *wb)
 
 int temporarily_open_output(struct ccx_s_write *wb)
 {
-	int t = 0;
-	// Try a few times before giving up. This is because this close/open stuff exists for processes
-	// that demand exclusive access to the file, so often we'll find out that we cannot reopen the
-	// file immediately.
-	while (t < 5 && wb->fh == -1)
-	{
-		wb->fh = open(wb->filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, S_IREAD | S_IWRITE);
-		sleep(1);
-	}
-	if (wb->fh == -1)
-	{
-		return CCX_COMMON_EXIT_FILE_CREATION_FAILED;
-	}
-	wb->temporarily_closed = 0;
-	return EXIT_OK;
+    int retries = 5;
+    while (retries-- > 0 && wb->fh == NULL) {
+        wb->fh = fopen(wb->filename, wb->append_mode ? "a" : "w");
+        if (!wb->fh) {
+            if (retries > 0) {
+                sleep(1);
+                continue;
+            }
+            mprint("Error: can't open output file: %s\n", wb->filename);
+            return CCX_COMMON_EXIT_FILE_CREATION_FAILED;
+        }
+        break;
+    }
+    
+    wb->temporarily_closed = 0;
+    return EXIT_OK;
 }
-
 int init_write(struct ccx_s_write *wb, char *filename, int with_semaphore)
 {
-	memset(wb, 0, sizeof(struct ccx_s_write));
-	wb->fh = -1;
-	wb->temporarily_closed = 0;
-	wb->filename = filename;
-	wb->original_filename = strdup(filename);
+    memset(wb, 0, sizeof(struct ccx_s_write));
+    wb->fh = NULL;
+    wb->temporarily_closed = 0;
+    wb->filename = strdup(filename);
+    wb->original_filename = strdup(filename);
 
-	wb->with_semaphore = with_semaphore;
-	wb->append_mode = ccx_options.enc_cfg.append_mode;
-	if (!(wb->append_mode))
-		wb->fh = open(filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, S_IREAD | S_IWRITE);
-	else
-		wb->fh = open(filename, O_RDWR | O_CREAT | O_APPEND | O_BINARY, S_IREAD | S_IWRITE);
-	wb->renaming_extension = 0;
-	if (wb->fh == -1)
-	{
-		return CCX_COMMON_EXIT_FILE_CREATION_FAILED;
-	}
-	if (with_semaphore)
-	{
-		wb->semaphore_filename = (char *)malloc(strlen(filename) + 6);
-		if (!wb->semaphore_filename)
-			return EXIT_NOT_ENOUGH_MEMORY;
-		sprintf(wb->semaphore_filename, "%s.sem", filename);
-		int t = open(wb->semaphore_filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, S_IREAD | S_IWRITE);
-		if (t == -1)
-		{
-			close(wb->fh);
-			return CCX_COMMON_EXIT_FILE_CREATION_FAILED;
-		}
-		close(t);
-	}
-	return EXIT_OK;
+    wb->with_semaphore = with_semaphore;
+    wb->append_mode = ccx_options.enc_cfg.append_mode;
+
+    // Open file with appropriate mode
+    wb->fh = fopen(wb->filename, wb->append_mode ? "a" : "w");
+    if (!wb->fh) {
+        mprint("Failed to open output file: %s\n", wb->filename);
+        return CCX_COMMON_EXIT_FILE_CREATION_FAILED;
+    }
+
+    wb->renaming_extension = 0;
+
+    if (with_semaphore) {
+        wb->semaphore_filename = (char *)malloc(strlen(filename) + 6);
+        if (!wb->semaphore_filename)
+            return EXIT_NOT_ENOUGH_MEMORY;
+        sprintf(wb->semaphore_filename, "%s.sem", filename);
+        FILE *fh = fopen(wb->semaphore_filename, "w");
+        if (!fh) {
+            fclose(wb->fh);
+            return CCX_COMMON_EXIT_FILE_CREATION_FAILED;
+        }
+        fclose(fh);
+    }
+
+    return EXIT_OK;
 }
 
 int writeraw(const unsigned char *data, int length, void *private_data, struct cc_subtitle *sub)

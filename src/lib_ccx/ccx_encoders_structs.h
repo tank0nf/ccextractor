@@ -15,18 +15,25 @@ typedef struct ccx_encoders_transcript_format {
 
 struct ccx_s_write
 {
-	int fh;
-	int temporarily_closed; // 1 means the file was created OK before but we released the handle
-	char *filename;
-	char *original_filename;
-	void* spupng_data;
-	int with_semaphore;     // 1 means create a .sem file when the file is open and delete it when it's closed
-	char *semaphore_filename;
-	int with_playlist;      // For m3u8 /webvtt: If 1, we'll generate a playlist and segments
-	char *playlist_filename; 
-	int renaming_extension; //Used for file rotations
-	int append_mode;        /* Append the file. Prevent overwriting of files */
-
+    char *filename;                    // Output filename
+    char *original_filename;           // Original filename before any modifications
+    FILE *fh;                         // File handle (changed from int)
+    int temporarily_closed;           // 1 means the file was created OK before but we released the handle
+    void* spupng_data;               // Subtitle PNG data
+    int with_semaphore;              // 1 means create a .sem file when the file is open and delete it when it's closed
+    char *semaphore_filename;        // Semaphore filename
+    int with_playlist;               // For m3u8 /webvtt: If 1, we'll generate a playlist and segments
+    char *playlist_filename;         // Playlist filename
+    int renaming_extension;          // Used for file rotations
+    int append_mode;                 // Append the file. Prevent overwriting of files
+    struct encoder_ctx *enc_ctx;     // Encoder context
+    LLONG fts;                      // File timestamp
+    LLONG fts_max;                  // Max file timestamp
+    LLONG fts_now;                  // Current timestamp
+    char *encoding;                 // Character encoding
+    char *subtype;                 // Subtitle type
+    struct ccx_s_write *prev;      // Previous write context
+    struct ccx_s_write *next;      // Next write context
 };
 
 #endif

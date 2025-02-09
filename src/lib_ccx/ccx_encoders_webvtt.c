@@ -137,7 +137,7 @@ int write_stringz_as_webvtt(char *string, struct encoder_ctx *context, LLONG ms_
 	dbg_print(CCX_DMT_DECODER_608, "\n- - - WEBVTT caption - - -\n");
 	dbg_print(CCX_DMT_DECODER_608, "%s", timeline);
 
-	written = write(context->out->fh, context->buffer, used);
+	written = write(fileno(context->out->fh), context->buffer, used);
 	if (written != used)
 		return -1;
 	int len = strlen(string);
@@ -173,14 +173,14 @@ int write_stringz_as_webvtt(char *string, struct encoder_ctx *context, LLONG ms_
 			dbg_print(CCX_DMT_DECODER_608, "\r");
 			dbg_print(CCX_DMT_DECODER_608, "%s\n", context->subline);
 		}
-		written = write(context->out->fh, el, u);
+		written = write(fileno(context->out->fh), el, u);
 		if (written != u)
 		{
 			free(el);
 			free(unescaped);
 			return -1;
 		}
-		written = write(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+		written = write(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 		if (written != context->encoded_crlf_length)
 		{
 			free(el);
@@ -191,7 +191,7 @@ int write_stringz_as_webvtt(char *string, struct encoder_ctx *context, LLONG ms_
 
 	dbg_print(CCX_DMT_DECODER_608, "- - - - - - - - - - - -\r\n");
 
-	written = write(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+	written = write(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 	free(el);
 	free(unescaped);
 	if (written != context->encoded_crlf_length)
@@ -220,18 +220,18 @@ void write_webvtt_header(struct encoder_ctx *context)
 			ccx_options.enc_cfg.line_terminator_lf ? "\n\n" : "\r\n\r\n");
 
 		used = encode_line(context, context->buffer, (unsigned char *)header_string);
-		write_wrapped(context->out->fh, context->buffer, used);
+		write_wrapped(fileno(context->out->fh), context->buffer, used);
 	}
 	else
 	{
 		// Must have another newline if X-TIMESTAMP-MAP is not used
 		if (ccx_options.enc_cfg.line_terminator_lf == 1) // If -lf parameter is set.
 		{
-			write_wrapped(context->out->fh, "\n", 1);
+			write_wrapped(fileno(context->out->fh), "\n", 1);
 		}
 		else
 		{
-			write_wrapped(context->out->fh, "\r\n", 2);
+			write_wrapped(fileno(context->out->fh), "\r\n", 2);
 		}
 	}
 
@@ -252,21 +252,21 @@ void write_webvtt_header(struct encoder_ctx *context)
 
 		char *outline_css_file = (char *)malloc((strlen(css_file_name) + strlen(webvtt_outline_css)) * sizeof(char));
 		sprintf(outline_css_file, webvtt_outline_css, css_file_name);
-		write_wrapped(context->out->fh, outline_css_file, strlen(outline_css_file));
+		write_wrapped(fileno(context->out->fh), outline_css_file, strlen(outline_css_file));
 	}
 	else if (ccx_options.use_webvtt_styling)
 	{
-		write_wrapped(context->out->fh, webvtt_inline_css, strlen(webvtt_inline_css));
+		write_wrapped(fileno(context->out->fh), webvtt_inline_css, strlen(webvtt_inline_css));
 		if (ccx_options.enc_cfg.line_terminator_lf == 1) // If -lf parameter is set.
 		{
-			write_wrapped(context->out->fh, "\n", 1);
+			write_wrapped(fileno(context->out->fh), "\n", 1);
 		}
 		else
 		{
-			write_wrapped(context->out->fh, "\r\n", 2);
+			write_wrapped(fileno(context->out->fh), "\r\n", 2);
 		}
-		write_wrapped(context->out->fh, "##\n", 3);
-		write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+		write_wrapped(fileno(context->out->fh), "##\n", 3);
+		write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 	}
 
 	context->wrote_webvtt_header = 1; // Do it even if couldn't write the header, because it won't be possible anyway
@@ -304,10 +304,10 @@ int write_cc_bitmap_as_webvtt(struct cc_subtitle *sub, struct encoder_ctx *conte
 			sprintf(timeline, "%02u:%02u:%02u.%03u --> %02u:%02u:%02u.%03u%s",
 				h1, m1, s1, ms1, h2, m2, s2, ms2, context->encoded_crlf);
 			used = encode_line(context, context->buffer, (unsigned char *)timeline);
-			write_wrapped(context->out->fh, context->buffer, used);
+			write_wrapped(fileno(context->out->fh), context->buffer, used);
 			len = strlen(str);
-			write_wrapped(context->out->fh, str, len);
-			write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+			write_wrapped(fileno(context->out->fh), str, len);
+			write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 		}
 		freep(&str);
 	}
@@ -442,7 +442,7 @@ int write_cc_buffer_as_webvtt(struct eia608_screen *data, struct encoder_ctx *co
 
 			dbg_print(CCX_DMT_DECODER_608, "\n- - - WEBVTT caption - - -\n");
 			dbg_print(CCX_DMT_DECODER_608, "%s", timeline);
-			written = write(context->out->fh, context->buffer, used);
+			written = write(fileno(context->out->fh), context->buffer, used);
 			if (written != used)
 				return -1;
 
@@ -475,18 +475,18 @@ int write_cc_buffer_as_webvtt(struct eia608_screen *data, struct encoder_ctx *co
 					if (open_font != FONT_REGULAR)
 					{
 						if (open_font & FONT_ITALICS)
-							write_wrapped(context->out->fh, strdup("<i>"), 3);
+							write_wrapped(fileno(context->out->fh), strdup("<i>"), 3);
 						if (open_font & FONT_UNDERLINED)
-							write_wrapped(context->out->fh, strdup("<u>"), 3);
+							write_wrapped(fileno(context->out->fh), strdup("<u>"), 3);
 					}
 
 					// opening events for colors
 					int open_color = color_events[j] & 0xFF; // Last 16 bytes
 					if (open_color != COL_WHITE)
 					{
-						write_wrapped(context->out->fh, strdup("<c."), 3);
-						write_wrapped(context->out->fh, color_text[open_color][0], strlen(color_text[open_color][0]));
-						write_wrapped(context->out->fh, ">", 1);
+						write_wrapped(fileno(context->out->fh), strdup("<c."), 3);
+						write_wrapped(fileno(context->out->fh), color_text[open_color][0], strlen(color_text[open_color][0]));
+						write_wrapped(fileno(context->out->fh), ">", 1);
 					}
 				}
 
@@ -496,7 +496,7 @@ int write_cc_buffer_as_webvtt(struct eia608_screen *data, struct encoder_ctx *co
 					unsigned char buf[5] = {0};
 					// Note: reference should be safe even when j == COLUMNS; characters is nul-terminated
 					int bytes = get_char_in_utf_8(buf, data->characters[i][j]);
-					write_wrapped(context->out->fh, buf, bytes);
+					write_wrapped(fileno(context->out->fh), buf, bytes);
 				}
 
 				if (ccx_options.use_webvtt_styling)
@@ -505,7 +505,7 @@ int write_cc_buffer_as_webvtt(struct eia608_screen *data, struct encoder_ctx *co
 					int close_color = color_events[j] >> 16; // First 16 bytes
 					if (close_color != COL_WHITE)
 					{
-						write_wrapped(context->out->fh, strdup("</c>"), 4);
+						write_wrapped(fileno(context->out->fh), strdup("</c>"), 4);
 					}
 
 					// closing events for fonts
@@ -513,9 +513,9 @@ int write_cc_buffer_as_webvtt(struct eia608_screen *data, struct encoder_ctx *co
 					if (close_font != FONT_REGULAR)
 					{
 						if (close_font & FONT_UNDERLINED)
-							write_wrapped(context->out->fh, strdup("</u>"), 4);
+							write_wrapped(fileno(context->out->fh), strdup("</u>"), 4);
 						if (close_font & FONT_ITALICS)
-							write_wrapped(context->out->fh, strdup("</i>"), 4);
+							write_wrapped(fileno(context->out->fh), strdup("</i>"), 4);
 					}
 				}
 			}
@@ -526,12 +526,12 @@ int write_cc_buffer_as_webvtt(struct eia608_screen *data, struct encoder_ctx *co
 				free(font_events);
 			}
 
-			written = write(context->out->fh,
+			written = write(fileno(context->out->fh),
 					context->encoded_crlf, context->encoded_crlf_length);
 			if (written != context->encoded_crlf_length)
 				return -1;
 
-			written = write(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+			written = write(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 			if (written != context->encoded_crlf_length)
 				return -1;
 

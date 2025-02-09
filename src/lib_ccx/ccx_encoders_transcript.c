@@ -38,7 +38,7 @@ int write_cc_bitmap_as_transcript(struct cc_subtitle *sub, struct encoder_ctx *c
 				if (context->transcript_settings->relativeTimestamp)
 				{
 					millis_to_date(sub->start_time, buf1, context->date_format, context->millis_separator);
-					fdprintf(context->out->fh, "%s|", buf1);
+					fdprintf(fileno(context->out->fh), "%s|", buf1);
 				}
 				else
 				{
@@ -46,7 +46,7 @@ int write_cc_bitmap_as_transcript(struct cc_subtitle *sub, struct encoder_ctx *c
 					int start_time_dec = sub->start_time % 1000;
 					struct tm *start_time_struct = gmtime(&start_time_int);
 					strftime(buf1, sizeof(buf1), "%Y%m%d%H%M%S", start_time_struct);
-					fdprintf(context->out->fh, "%s%c%03d|", buf1, context->millis_separator, start_time_dec);
+					fdprintf(fileno(context->out->fh), "%s%c%03d|", buf1, context->millis_separator, start_time_dec);
 				}
 			}
 
@@ -56,7 +56,7 @@ int write_cc_bitmap_as_transcript(struct cc_subtitle *sub, struct encoder_ctx *c
 				if (context->transcript_settings->relativeTimestamp)
 				{
 					millis_to_date(sub->end_time, buf2, context->date_format, context->millis_separator);
-					fdprintf(context->out->fh, "%s|", buf2);
+					fdprintf(fileno(context->out->fh), "%s|", buf2);
 				}
 				else
 				{
@@ -64,16 +64,16 @@ int write_cc_bitmap_as_transcript(struct cc_subtitle *sub, struct encoder_ctx *c
 					int end_time_dec = sub->end_time % 1000;
 					struct tm *end_time_struct = gmtime(&end_time_int);
 					strftime(buf2, sizeof(buf2), "%Y%m%d%H%M%S", end_time_struct);
-					fdprintf(context->out->fh, "%s%c%03d|", buf2, context->millis_separator, end_time_dec);
+					fdprintf(fileno(context->out->fh), "%s%c%03d|", buf2, context->millis_separator, end_time_dec);
 				}
 			}
 			if (context->transcript_settings->showCC)
 			{
-				fdprintf(context->out->fh, "%s|", language[sub->lang_index]);
+				fdprintf(fileno(context->out->fh), "%s|", language[sub->lang_index]);
 			}
 			if (context->transcript_settings->showMode)
 			{
-				fdprintf(context->out->fh, "DVB|");
+				fdprintf(fileno(context->out->fh), "DVB|");
 			}
 
 			while (token)
@@ -81,22 +81,22 @@ int write_cc_bitmap_as_transcript(struct cc_subtitle *sub, struct encoder_ctx *c
 				char *newline_pos = strstr(token, context->encoded_crlf);
 				if (!newline_pos)
 				{
-					fdprintf(context->out->fh, "%s", token);
+					fdprintf(fileno(context->out->fh), "%s", token);
 					break;
 				}
 				else
 				{
 					while (token != newline_pos)
 					{
-						fdprintf(context->out->fh, "%c", *token);
+						fdprintf(fileno(context->out->fh), "%c", *token);
 						token++;
 					}
 					token += context->encoded_crlf_length;
-					fdprintf(context->out->fh, "%c", ' ');
+					fdprintf(fileno(context->out->fh), "%c", ' ');
 				}
 			}
 
-			write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+			write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 		}
 	}
 #endif
@@ -156,15 +156,14 @@ int write_cc_subtitle_as_transcript(struct cc_subtitle *sub, struct encoder_ctx 
 				if (context->transcript_settings->relativeTimestamp)
 				{
 					millis_to_date(start_time, buf, context->date_format, context->millis_separator);
-					fdprintf(context->out->fh, "%s|", buf);
-				}
+					fdprintf(fileno(fileno(context->out->fh)), "%s|", buf);				}
 				else
 				{
 					time_t start_time_int = start_time / 1000;
 					int start_time_dec = start_time % 1000;
 					struct tm *start_time_struct = gmtime(&start_time_int);
 					strftime(buf, sizeof(buf), "%Y%m%d%H%M%S", start_time_struct);
-					fdprintf(context->out->fh, "%s%c%03d|", buf, context->millis_separator, start_time_dec);
+					fdprintf(fileno(context->out->fh), "%s%c%03d|", buf, context->millis_separator, start_time_dec);
 				}
 			}
 
@@ -174,40 +173,39 @@ int write_cc_subtitle_as_transcript(struct cc_subtitle *sub, struct encoder_ctx 
 				if (context->transcript_settings->relativeTimestamp)
 				{
 					millis_to_date(end_time, buf, context->date_format, context->millis_separator);
-					fdprintf(context->out->fh, "%s|", buf);
-				}
+					fdprintf(fileno(context->out->fh), "%s|", buf);				}
 				else
 				{
 					time_t end_time_int = end_time / 1000;
 					int end_time_dec = end_time % 1000;
 					struct tm *end_time_struct = gmtime(&end_time_int);
 					strftime(buf, sizeof(buf), "%Y%m%d%H%M%S", end_time_struct);
-					fdprintf(context->out->fh, "%s%c%03d|", buf, context->millis_separator, end_time_dec);
+					fdprintf(fileno(context->out->fh), "%s%c%03d|", buf, context->millis_separator, end_time_dec);
 				}
 			}
 
 			if (context->transcript_settings->showCC)
 			{
 				if (!context->ucla || !strcmp(sub->mode, "TLT"))
-					fdprintf(context->out->fh, sub->info);
+					fdprintf(fileno(context->out->fh), sub->info);
 				else if (context->in_fileformat == 1)
 					// TODO, data->my_field == 1 ? data->channel : data->channel + 2); // Data from field 2 is CC3 or 4
-					fdprintf(context->out->fh, "CC?|");
+					fdprintf(fileno(context->out->fh), "CC?|");
 			}
 			if (context->transcript_settings->showMode)
 			{
 				if (context->ucla && strcmp(sub->mode, "TLT") == 0)
-					fdprintf(context->out->fh, "|");
+					fdprintf(fileno(context->out->fh), "|");
 				else
-					fdprintf(context->out->fh, "%s|", sub->mode);
+					fdprintf(fileno(context->out->fh), "%s|", sub->mode);
 			}
-			ret = write(context->out->fh, context->subline, length);
+			ret = write(fileno(context->out->fh), context->subline, length);
 			if (ret < length)
 			{
 				mprint("Warning:Loss of data\n");
 			}
 
-			ret = write(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+			ret = write(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 			if (ret < context->encoded_crlf_length)
 			{
 				mprint("Warning:Loss of data\n");
@@ -259,7 +257,7 @@ void write_cc_line_as_transcript2(struct eia608_screen *data, struct encoder_ctx
 			if (context->transcript_settings->relativeTimestamp)
 			{
 				millis_to_date(data->start_time, buf1, context->date_format, context->millis_separator);
-				fdprintf(context->out->fh, "%s|", buf1);
+				fdprintf(fileno(context->out->fh), "%s|", buf1);
 			}
 			else
 			{
@@ -267,7 +265,7 @@ void write_cc_line_as_transcript2(struct eia608_screen *data, struct encoder_ctx
 				int start_time_dec = data->start_time % 1000;
 				struct tm *start_time_struct = gmtime(&start_time_int);
 				strftime(buf1, sizeof(buf1), "%Y%m%d%H%M%S", start_time_struct);
-				fdprintf(context->out->fh, "%s%c%03d|", buf1, context->millis_separator, start_time_dec);
+				fdprintf(fileno(context->out->fh), "%s%c%03d|", buf1, context->millis_separator, start_time_dec);
 			}
 		}
 
@@ -277,7 +275,7 @@ void write_cc_line_as_transcript2(struct eia608_screen *data, struct encoder_ctx
 			if (context->transcript_settings->relativeTimestamp)
 			{
 				millis_to_date(data->end_time, buf2, context->date_format, context->millis_separator);
-				fdprintf(context->out->fh, "%s|", buf2);
+				fdprintf(fileno(context->out->fh), "%s|", buf2);
 			}
 			else
 			{
@@ -285,13 +283,13 @@ void write_cc_line_as_transcript2(struct eia608_screen *data, struct encoder_ctx
 				int end_time_dec = data->end_time % 1000;
 				struct tm *end_time_struct = gmtime(&end_time_int);
 				strftime(buf2, sizeof(buf2), "%Y%m%d%H%M%S", end_time_struct);
-				fdprintf(context->out->fh, "%s%c%03d|", buf2, context->millis_separator, end_time_dec);
+				fdprintf(fileno(context->out->fh), "%s%c%03d|", buf2, context->millis_separator, end_time_dec);
 			}
 		}
 
 		if (context->transcript_settings->showCC)
 		{
-			fdprintf(context->out->fh, "CC%d|", data->my_field == 1 ? data->channel : data->channel + 2); // Data from field 2 is CC3 or 4
+			fdprintf(fileno(context->out->fh), "CC%d|", data->my_field == 1 ? data->channel : data->channel + 2); // Data from field 2 is CC3 or 4
 		}
 		if (context->transcript_settings->showMode)
 		{
@@ -320,16 +318,16 @@ void write_cc_line_as_transcript2(struct eia608_screen *data, struct encoder_ctx
 					mode = "PAI";
 					break;
 			}
-			fdprintf(context->out->fh, "%s|", mode);
+			fdprintf(fileno(context->out->fh), "%s|", mode);
 		}
 
-		ret = write(context->out->fh, context->subline, length);
+		ret = write(fileno(context->out->fh), context->subline, length);
 		if (ret < length)
 		{
 			mprint("Warning:Loss of data\n");
 		}
 
-		ret = write(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+		ret = write(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 		if (ret < context->encoded_crlf_length)
 		{
 			mprint("Warning:Loss of data\n");

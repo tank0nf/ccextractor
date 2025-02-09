@@ -580,7 +580,7 @@ int write_cc_subtitle_as_simplexml(struct cc_subtitle *sub, struct encoder_ctx *
 			{
 				continue;
 			}
-			ret = write(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+			ret = write(fileno(fileno(fileno(fileno(fileno(fileno(fileno(context->out->fh))))))), context->encoded_crlf, context->encoded_crlf_length);
 			if (ret < context->encoded_crlf_length)
 			{
 				mprint("Warning:Loss of data\n");
@@ -612,14 +612,14 @@ void write_cc_line_as_simplexml(struct eia608_screen *data, struct encoder_ctx *
 	length = get_str_basic(context->subline, data->characters[line_number],
 			       context->trim_subs, CCX_ENC_ASCII, context->encoding, CCX_DECODER_608_SCREEN_WIDTH);
 
-	ret = write(context->out->fh, cap, strlen(cap));
-	ret = write(context->out->fh, context->subline, length);
+	ret = write(fileno(context->out->fh), cap, strlen(cap));
+	ret = write(fileno(context->out->fh), context->subline, length);
 	if (ret < length)
 	{
 		mprint("Warning:Loss of data\n");
 	}
-	ret = write(context->out->fh, cap1, strlen(cap1));
-	ret = write(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+	ret = write(fileno(context->out->fh), cap1, strlen(cap1));
+	ret = write(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 }
 
 int write_cc_buffer_as_simplexml(struct eia608_screen *data, struct encoder_ctx *context)
@@ -1297,7 +1297,7 @@ int encode_sub(struct encoder_ctx *context, struct cc_subtitle *sub)
 				net_send_header(sub->data, sub->nb_data);
 			else
 			{
-				ret = write(context->out->fh, sub->data, sub->nb_data);
+				ret = write(fileno(context->out->fh), sub->data, sub->nb_data);
 				if (ret < sub->nb_data)
 				{
 					mprint("WARNING: Loss of data\n");
@@ -1352,7 +1352,7 @@ int encode_sub(struct encoder_ctx *context, struct cc_subtitle *sub)
 	if (!sub->nb_data)
 		freep(&sub->data);
 	if (wrote_something && context->force_flush)
-		fsync(context->out->fh); // Don't buffer
+		fsync(fileno(context->out->fh)); // Don't buffer
 	return wrote_something;
 }
 
@@ -1385,7 +1385,7 @@ void write_cc_buffer_to_gui(struct eia608_screen *data, struct encoder_ctx *cont
 				time_reported = 1;
 			}
 			else
-				fprintf(stderr, "###SUBTITLE###");
+			fprintf(stderr, "###SUBTITLE###");
 
 			// We don't capitalize here because whatever function that was used
 			// before to write to file already took care of it.

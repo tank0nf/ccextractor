@@ -521,23 +521,23 @@ enum control_code get_font_code(enum font_bits font, enum ccx_decoder_608_color_
 
 void add_timestamp(const struct encoder_ctx *context, LLONG time, const bool disassemble)
 {
-	write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+	write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 	if (!disassemble)
-		write_wrapped(context->out->fh, context->encoded_crlf, context->encoded_crlf_length);
+		write_wrapped(fileno(context->out->fh), context->encoded_crlf, context->encoded_crlf_length);
 
 	unsigned hour, minute, second, milli;
 	millis_to_time(time, &hour, &minute, &second, &milli);
 
 	// SMPTE format
 	float frame = milli * 29.97 / 1000;
-	fdprintf(context->out->fh, "%02u:%02u:%02u:%02.f\t", hour, minute, second, frame);
+	fdprintf(fileno(context->out->fh), "%02u:%02u:%02u:%02.f\t", hour, minute, second, frame);
 }
 
 void clear_screen(const struct encoder_ctx *context, LLONG end_time, const unsigned char channel, const bool disassemble)
 {
 	add_timestamp(context, end_time, disassemble);
 	unsigned int bytes_written = 0;
-	write_control_code(context->out->fh, channel, EDM, disassemble, &bytes_written);
+	write_control_code(fileno(context->out->fh), channel, EDM, disassemble, &bytes_written);
 }
 
 int write_cc_buffer_as_scenarist(const struct eia608_screen *data, struct encoder_ctx *context, const char disassemble)
@@ -550,7 +550,7 @@ int write_cc_buffer_as_scenarist(const struct eia608_screen *data, struct encode
 
 	// 1. Load the caption
 	add_timestamp(context, data->start_time, disassemble);
-	write_control_code(context->out->fh, data->channel, RCL, disassemble, &bytes_written);
+	write_control_code(fileno(context->out->fh), data->channel, RCL, disassemble, &bytes_written);
 	for (uint8_t row = 0; row < 15; ++row)
 	{
 		// If there is nothing to display on this row, skip it.
@@ -598,26 +598,26 @@ int write_cc_buffer_as_scenarist(const struct eia608_screen *data, struct encode
 					tab_offset_code = get_tab_offset_code(column);
 				}
 
-				write_control_code(context->out->fh, data->channel, position_code, disassemble, &bytes_written);
+				write_control_code(fileno(context->out->fh), data->channel, position_code, disassemble, &bytes_written);
 				if (tab_offset_code)
-					write_control_code(context->out->fh, data->channel, tab_offset_code, disassemble, &bytes_written);
+					write_control_code(fileno(context->out->fh), data->channel, tab_offset_code, disassemble, &bytes_written);
 				if (switch_font || switch_color)
-					write_control_code(context->out->fh, data->channel, font_code, disassemble, &bytes_written);
+					write_control_code(fileno(context->out->fh), data->channel, font_code, disassemble, &bytes_written);
 
 				current_row = row;
 				current_column = column;
 				current_font = data->fonts[row][column];
 				current_color = data->colors[row][column];
 			}
-			write_character(context->out->fh, data->characters[row][column], disassemble, &bytes_written);
+			write_character(fileno(context->out->fh), data->characters[row][column], disassemble, &bytes_written);
 			++current_column;
 		}
-		check_padding(context->out->fh, disassemble, &bytes_written);
+		check_padding(fileno(context->out->fh), disassemble, &bytes_written);
 	}
 
 	// 2. Show the caption
-	write_control_code(context->out->fh, data->channel, EOC, disassemble, &bytes_written);
-	write_control_code(context->out->fh, data->channel, ENM, disassemble, &bytes_written);
+	write_control_code(fileno(context->out->fh), data->channel, EOC, disassemble, &bytes_written);
+	write_control_code(fileno(context->out->fh), data->channel, ENM, disassemble, &bytes_written);
 
 	// 3. Clear the caption
 	clear_screen(context, data->end_time, data->channel, disassemble);
@@ -629,7 +629,7 @@ int write_cc_buffer_as_ccd(const struct eia608_screen *data, struct encoder_ctx 
 {
 	if (!context->wrote_ccd_channel_header)
 	{
-		fdprintf(context->out->fh, "CHANNEL %d%s", data->channel, context->encoded_crlf);
+		fdprintf(fileno(context->out->fh), "CHANNEL %d%s", data->channel, context->encoded_crlf);
 		context->wrote_ccd_channel_header = true;
 	}
 	return write_cc_buffer_as_scenarist(data, context, true);

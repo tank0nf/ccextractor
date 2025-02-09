@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
+#include <signal.h>
+#include <string.h>
 #include "lib_ccx.h"
 #include "ccx_common_option.h"
 #include "activity.h"
@@ -290,16 +292,27 @@ void print_error(int mode, const char *fmt, ...)
 	va_end(args);
 }
 
-void write_wrapped(int fd, const char *buf, size_t count)
+// void write_wrapped(int fd, const char *buf, size_t count)
+// {
+// 	while (count)
+// 	{
+// 		ssize_t written = write(fd, buf, count);
+// 		if (written == -1)
+// 			fatal(1, "writing to file");
+// 		buf += written;
+// 		count -= written;
+// 	}
+// }
+
+void write_wrapped(FILE *fh, const char *buf, size_t count) 
 {
-	while (count)
-	{
-		ssize_t written = write(fd, buf, count);
-		if (written == -1)
-			fatal(1, "writing to file");
-		buf += written;
-		count -= written;
-	}
+    if (fh && buf) {
+        size_t written = fwrite(buf, 1, count, fh);
+        if (written != count) {
+            mprint("Warning: Not all data was written. Expected: %zu Written: %zu\n", 
+                   count, written);
+        }
+    }
 }
 
 /* Write formatted message to stderr and then exit. */
@@ -445,20 +458,37 @@ int hex_string_to_int(char *string, int len)
 	return total_return;
 }
 
-#ifndef _WIN32
+#ifdef _WIN32
 void m_signal(int sig, void (*func)(int))
 {
-	struct sigaction act;
-	act.sa_handler = func;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = 0;
-
-	if (sigaction(sig, &act, NULL))
-		perror("sigaction() error");
-
-	return;
+    if (signal(sig, func) == SIG_ERR) {
+        mprint("Warning: signal() error on signal %d\n", sig);
+    }
 }
+#else
+void m_signal(int sig, void (*func)(int))
+{
+    struct sigaction act;
+    memset(&act, 0, sizeof(act));  // Zero out the sigaction struct
+    
+    // Set up signal handler
+    act.sa_handler = func;
+    
+    // Initialize signal mask
+    if (sigemptyset(&act.sa_mask) == -1) {
+        mprint("Warning: sigemptyset() failed: %s\n", strerror(errno));
+        return;
+    }
+    
+    // Set flags (no special behavior needed)
+    act.sa_flags = 0;
 
+    // Install signal handler
+    if (sigaction(sig, &act, NULL) == -1) {
+        mprint("Warning: sigaction() failed for signal %d: %s\n", 
+               sig, strerror(errno));
+    }
+}
 #endif
 
 struct encoder_ctx *change_filename(struct encoder_ctx *enc_ctx)
@@ -511,7 +541,11 @@ struct encoder_ctx *change_filename(struct encoder_ctx *enc_ctx)
 			free(newname);
 		}
 
-		enc_ctx->out->fh = open(enc_ctx->out->filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, S_IREAD | S_IWRITE);
+		enc_ctx->out->fh = fopen(enc_ctx->out->filename, "w");  // or "a" for append mode
+if (!enc_ctx->out->fh) {
+	perror("Error opening file");
+	return temp_encoder;
+}
 		free(current_name);
 		if (enc_ctx->out->fh == -1)
 		{

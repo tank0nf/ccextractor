@@ -35,11 +35,11 @@ void xds_write_transcript_line_prefix(struct encoder_ctx *context, struct ccx_s_
 			if (utc_refvalue == UINT64_MAX)
 			{
 				millis_to_time(start_time, &h1, &m1, &s1, &ms1);
-				fdprintf(wb->fh, "%02u:%02u:%02u%c%03u|", h1, m1, s1, context->millis_separator, ms1);
+				fdprintf(fileno(wb->fh), "%02u:%02u:%02u%c%03u|", h1, m1, s1, context->millis_separator, ms1);
 			}
 			else
 			{
-				fdprintf(wb->fh, "%lld%c%03d|", start_time / 1000,
+				fprintf(wb->fh, "%lld%c%03d|", start_time / 1000,
 					 context->millis_separator, start_time % 1000);
 			}
 		}
@@ -50,7 +50,7 @@ void xds_write_transcript_line_prefix(struct encoder_ctx *context, struct ccx_s_
 			int start_time_dec = start_time % 1000;
 			struct tm *start_time_struct = gmtime(&start_time_int);
 			strftime(buffer, sizeof(buffer), "%Y%m%d%H%M%S", start_time_struct);
-			fdprintf(wb->fh, "%s%c%03d|", buffer, context->millis_separator, start_time_dec);
+			fprintf(wb->fh, "%s%c%03d|", buffer, context->millis_separator, start_time_dec);
 		}
 	}
 
@@ -62,11 +62,11 @@ void xds_write_transcript_line_prefix(struct encoder_ctx *context, struct ccx_s_
 			if (utc_refvalue == UINT64_MAX)
 			{
 				millis_to_time(end_time, &h2, &m2, &s2, &ms2);
-				fdprintf(wb->fh, "%02u:%02u:%02u%c%03u|", h2, m2, s2, context->millis_separator, ms2);
+				fdprintf(fileno(wb->fh), "%02u:%02u:%02u%c%03u|", h2, m2, s2, context->millis_separator, ms2);
 			}
 			else
 			{
-				fdprintf(wb->fh, "%lld%s%03d|", end_time / 1000, context->millis_separator, end_time % 1000);
+				fprintf(wb->fh, "%lld%s%03d|", end_time / 1000, context->millis_separator, end_time % 1000);
 			}
 		}
 		else
@@ -76,18 +76,18 @@ void xds_write_transcript_line_prefix(struct encoder_ctx *context, struct ccx_s_
 			int end_time_dec = end_time % 1000;
 			struct tm *end_time_struct = gmtime(&end_time_int);
 			strftime(buffer, sizeof(buffer), "%Y%m%d%H%M%S", end_time_struct);
-			fdprintf(wb->fh, "%s%c%03d|", buffer, context->millis_separator, end_time_dec);
+			fprintf(wb->fh, "%s%c%03d|", buffer, context->millis_separator, end_time_dec);
 		}
 	}
 
 	if (context->transcript_settings->showMode)
 	{
 		const char *mode = "XDS";
-		fdprintf(wb->fh, "%s|", mode);
+		fprintf(wb->fh, "%s|", mode);
 	}
 
 	if (context->transcript_settings->showCC)
 	{
-		fdprintf(wb->fh, "%s|", XDSclasses_short[cur_xds_packet_class]);
+		fprintf(wb->fh, "%s|", XDSclasses_short[cur_xds_packet_class]);
 	}
 }
